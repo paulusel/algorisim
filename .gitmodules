@@ -1,0 +1,4 @@
+[submodule "modules/dstructures"]
+	path = modules/dstructures
+	url = https://github.com/paulusel/dstructures.git
+	branch = main
