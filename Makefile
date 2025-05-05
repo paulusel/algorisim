@@ -8,4 +8,3 @@ all:
 	$(MAKE) clear
 	$(MAKE) config
 	$(MAKE) compile
-
