@@ -1,4 +1,5 @@
-#include "philosophers.h"
+#include "simulator.h"
+#include "common.h"
 
 #include <pthread.h>
 #include <stdlib.h>
@@ -6,14 +7,19 @@
 #include <semaphore.h>
 #include <signal.h>
 #include <stdio.h>
+#include <time.h>
 #include <unistd.h>
-#include <fcntl.h>
 
 #define THINKING        0                   /* philosopher is thinking */
 #define HUNGRY          1                   /* philosopher is trying to get forks */
 #define EATING          2                   /* philosopher is eating */
 
 typedef sem_t semaphore;
+typedef struct {
+    int id;
+    int total_eats;
+    double total_wait;
+} philosopher_stat;
 
 semaphore state_mtx;                        /* mutual exclusion for state data*/
 semaphore print_mtx;                        /* printer access mutual exclusion */
@@ -29,7 +35,6 @@ void acquire_forks(int id);
 void release_forks(int id);
 void try_eat(int id);
 void* philosopher(void *v);
-int random_number();
 
 static inline int left_philosopher(int i) {
     return (i+n_philosophers-1)%n_philosophers;
@@ -37,14 +42,6 @@ static inline int left_philosopher(int i) {
 
 static inline int right_philosopher(int i) {
     return (i+1)%n_philosophers;
-}
-
-int random_number() {
-    int random_num;
-    int fd = open("/dev/urandom", O_RDONLY);
-    read(fd, &random_num, sizeof(random_num));
-    close(fd);
-    return abs(random_num) % 7;
 }
 
 void print_message(int id, const char* message, int r) {
@@ -80,20 +77,29 @@ void try_eat(int id) {
 void* philosopher(void *v) {
     int id = *(int*)v;
     print_message(id, "entering the dinning room", 0);
+    philosopher_stat *stat = (philosopher_stat*)malloc(sizeof(philosopher_stat));
+    *stat = (philosopher_stat) {
+        .id = id,
+        .total_wait = 0,
+        .total_eats = 0
+    };
 
     int r = 0;
     while (keep_running) {
         // think
-        r = random_number();
+        r = random_number() % 7;
         print_message(id, "thinking", r);
         sleep(r);
 
         // pick forks
         print_message(id, "hungry and waiting", 0);
+        time_t start = time(nullptr);
         acquire_forks(id);
+        stat->total_wait += difftime(time(nullptr), start);
         //eat
-        r = random_number() + 3;
+        r = (random_number() % 7) + 10;
         print_message(id, "eating", r);
+        ++stat->total_eats;
         sleep(r);
 
         // put down forks
@@ -101,14 +107,14 @@ void* philosopher(void *v) {
     }
 
     print_message(id, "leaving the dinning room", 0);
-    return nullptr;
+    return stat;
 }
 
 void interupt_signal_handler(int sig) {
     keep_running = false;
 }
 
-void philosophers_start_dinning(int nthreads) {
+void dinning_philosophers_simulator(int nthreads) {
     printf("Starting dinning philosophers simulator with %d philosophers ... \n\n", nthreads);
     n_philosophers = nthreads;
     state = (int*) malloc(sizeof(int) * n_philosophers);
@@ -129,8 +135,17 @@ void philosophers_start_dinning(int nthreads) {
     }
 
     signal(SIGINT, interupt_signal_handler);
+    void *stats[n_philosophers];
     for(int i = 0; i<n_philosophers; ++i) {
-        pthread_join(threads[i], nullptr);
+        pthread_join(threads[i], &stats[i]);
+    }
+
+    printf("\n\nStats\n\n");
+    for(int i = 0; i<n_philosophers; ++i) {
+        philosopher_stat *ph = (philosopher_stat*)stats[i];
+        printf("philosopher [%d]: wait: %ds eat: %d wait per eat: %.2fs\n",
+               ph->id, (int)ph->total_wait, ph->total_eats, ph->total_wait/ph->total_eats);
+        free(stats[i]);
     }
 
     sem_destroy(&state_mtx);

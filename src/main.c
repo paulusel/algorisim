@@ -1,10 +1,8 @@
+#include "simulator.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#include "philosophers/philosophers.h"
-#include "best_fit/best_fit.h"
-#include "worst_fit/worst_fit.h"
 
 int main(int argc, char* argv[]) {
     if(argc < 2) {
@@ -24,11 +22,13 @@ int main(int argc, char* argv[]) {
                 int val = atoi(argv[3]);
                 if(val) nthreads = val;
             }
-            philosophers_start_dinning(nthreads);
+            dinning_philosophers_simulator(nthreads);
             break;
         case 'b':
+            best_fit_simulator();
             break;
         case 'w':
+            worst_fit_simulator();
             break;
         default:
             printf("unrecognized argument. expected either -d, -b, -w\n");
