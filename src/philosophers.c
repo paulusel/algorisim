@@ -25,7 +25,7 @@ semaphore print_mtx;                        /* printer access mutual exclusion *
 
 int n_philosophers;
 int* state;                               /* array to keep track of everyone’s state */
-semaphore* wait;                          /* one semaphore per philosopher */
+semaphore* wait_sems;                          /* one semaphore per philosopher */
 
 bool keep_running = true;                          /* flag to exit thread */
 
@@ -55,7 +55,7 @@ void acquire_forks(int id) {
     state[id] = HUNGRY;
     try_eat(id);
     sem_post(&state_mtx);
-    sem_wait(&wait[id]);
+    sem_wait(&wait_sems[id]);
 }
 
 void release_forks(int id) {
@@ -69,7 +69,7 @@ void release_forks(int id) {
 void try_eat(int id) {
     if(state[id] == HUNGRY && state[left_philosopher(id)] != EATING && state[right_philosopher(id)] != EATING) {
         state[id] = EATING;
-        sem_post(&wait[id]);
+        sem_post(&wait_sems[id]);
     }
 }
 
@@ -117,13 +117,13 @@ void dinning_philosophers_simulator(int nthreads) {
     printf("Starting dinning philosophers simulator with %d philosophers ... \n\n", nthreads);
     n_philosophers = nthreads;
     state = (int*) malloc(sizeof(int) * n_philosophers);
-    wait = (semaphore *) malloc(sizeof(semaphore) * n_philosophers);
+    wait_sems = (semaphore *) malloc(sizeof(semaphore) * n_philosophers);
 
     // initialize semaphores
     sem_init(&state_mtx, 0, 1);
     sem_init(&print_mtx, 0, 1);
     for(int i = 0; i<n_philosophers; ++i) {
-        sem_init(&wait[i], 0, 1);
+        sem_init(&wait_sems[i], 0, 1);
     }
 
     pthread_t threads[n_philosophers];
@@ -150,9 +150,9 @@ void dinning_philosophers_simulator(int nthreads) {
     sem_destroy(&state_mtx);
     sem_destroy(&print_mtx);
     for(int i = 0; i<n_philosophers; ++i) {
-        sem_destroy(&wait[i]);
+        sem_destroy(&wait_sems[i]);
     }
 
     free(state);
-    free(wait);
+    free(wait_sems);
 }
