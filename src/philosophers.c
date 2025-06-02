@@ -3,7 +3,6 @@
 
 #include <pthread.h>
 #include <stdlib.h>
-#include <threads.h>
 #include <semaphore.h>
 #include <signal.h>
 #include <stdio.h>
